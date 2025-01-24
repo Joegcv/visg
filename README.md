@@ -11,3 +11,18 @@ pip install fastapi uvicorn websockets
 ou dans un fichier requirements.txt
 pip install -r requirements.txt
 
+.\frontend
+mkdir frontend
+cd frontend
+npm init -y
+
+Installer Typescript et un bundler (par exemple webpack)
+npm install --save-dev typescript ts-loader webpack webpack-cli
+
+--------------------------------------------
+execution:
+cd frontend
+npm run build
+
+cd ..  # Retournez à la racine du projet
+python main.py

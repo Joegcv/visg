@@ -1,11 +1,15 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 import asyncio
+import os
 
 app = FastAPI()
 
+# Chemin absolu vers le répertoire frontend
+frontend_directory = os.path.join(os.path.dirname(__file__), '../../frontend')
+
 # Servir les fichiers statiques du frontend
-app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
+app.mount("/", StaticFiles(directory=frontend_directory, html=True), name="static")
 
 # Stocker les connexions WebSocket actives
 active_connections = []
