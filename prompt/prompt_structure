@@ -1,0 +1,168 @@
+il faudrait que tu m'explique comment je peux créer un conteneur docker ou dockériser
+mon programme qui est écrit en python dans un environnement pour le backend et typescript le frontend.
+voici mon backend/app
+from fastapi import FastAPI, WebSocket
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+import asyncio
+import os
+
+app = FastAPI()
+
+# Chemin absolu vers le répertoire frontend
+frontend_directory = os.path.join(os.path.dirname(__file__), '../../frontend')
+
+# Servir les fichiers statiques du frontend
+#app.mount("/", StaticFiles(directory=frontend_directory, html=True), name="static")
+app.mount("/dist", StaticFiles(directory=os.path.join(frontend_directory, "dist")), name="static")
+
+@app.get("/",response_class=HTMLResponse)
+async def read_root():
+    with open(os.path.join(frontend_directory, "index.html")) as f:
+        return HTMLResponse(content=f.read(), status_code=200)
+    
+
+# Stocker les connexions WebSocket actives
+active_connections = []
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    active_connections.append(websocket)
+    try:
+        while True:
+            #data = await websocket.receive_text()
+            data = await websocket.receive_json()
+            print(f"Received message: {data}")  # Log le message reçu
+            # Simuler un changement d'état
+            await asyncio.sleep(1)
+            await websocket.send_json(
+                {   "type": "state_changed",
+                    "entity_id": "light.living_room", 
+                    #utilisation de l'entity_id reçu
+                    "state": "on" if data['action'] == "turn_on" else "off"
+                })
+    finally:
+        active_connections.remove(websocket)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="localhost", port=8000)
+
+et le frontend/src
+// app.ts
+class hawebsocket extends HTMLElement {
+    private ws: WebSocket;
+
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+        this.ws = new WebSocket('ws://localhost:8000/ws');
+       //track websocket
+       this.ws.onopen = () => {
+        console.log('WebSocket connection established');
+        this.updateConnectionStatus(true);
+    };
+    this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+    
+    this.ws.onclose = () => {
+        console.log('WebSocket connection closed');
+        this.updateConnectionStatus(true);
+    };
+
+    //fin tracker websocket
+        this.ws.onmessage = this.handleMessage.bind(this);
+    }
+   //**************fin du constructeur****************
+
+    connectedCallback() {
+        this.render();
+    }
+
+    
+    private updateEntityState(entityId: string, state: string) {
+        const element = this.shadowRoot?.querySelector(`[data-entity-id="${entityId}"]`);
+        if (element) {
+            element.setAttribute('state', state);
+        }
+    }
+
+    updateConnectionStatus(connected: boolean) {
+        const statusElement = this.shadowRoot?.getElementById('connection-status');
+        console.log(statusElement);
+        if (statusElement) {
+            statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+            statusElement.style.color = connected ? 'green' : 'red';
+        }
+    }
+
+    // Modification de la gestion des messages
+    private handleMessage(event: MessageEvent) {
+        try {
+            const data = JSON.parse(event.data);
+            console.log(data);
+            if (data.type === 'state_changed') {
+                console.log(data.state);
+                this.updateEntityState(data.entity_id, data.state);
+            }
+        } catch (error) {
+            console.error('Error parsing message:', error);
+        }
+    }
+    
+
+    private render() {
+        if (this.shadowRoot) {
+            this.shadowRoot.innerHTML = `
+                <style>
+                    .entity { padding: 10px; margin: 5px; border: 1px solid #ccc; }
+                    .entity[state="on"] { background-color: yellow; }
+                    .entity[state="off"] { background-color: grey; }
+                </style>
+                <div class="entity" data-entity-id="light.living_room" state="off">
+                    Living Room Light
+                    <button id="turnOn">Turn On</button>
+                    <button id="turnOff">Turn Off</button>
+                </div>
+            `;
+
+            this.shadowRoot.getElementById('turnOn')?.addEventListener('click', () => {
+                this.ws.send(JSON.stringify({ 
+                    type: 'state_changed',
+                    action: 'turn_on', 
+                    entity_id: 'light.living_room' 
+                }));
+            });
+
+            this.shadowRoot.getElementById('turnOff')?.addEventListener('click', () => {
+                this.ws.send(JSON.stringify({ 
+                    type: 'state_changed',
+                    action: 'turn_off', 
+                    entity_id: 'light.living_room' 
+                }));
+            });
+
+            
+
+        }
+    }
+}
+
+customElements.define('web-socket', hawebsocket);
+
+et frontend/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Assistant Example</title>
+    <script src="app.js" type="module"></script>
+</head>
+<body>
+    <home-assistant></home-assistant>
+</body>
+</html>
+
