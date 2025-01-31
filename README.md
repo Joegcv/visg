@@ -162,6 +162,9 @@ Dans le fichier frontend/src/app.ts modifier l'url du webscoket:
 this.ws = new WebSocket('ws://localhost/ws');
 
 Construction et exécution
+installer docker
+docker-compose version
+
 du conteneur utilisez les commande à la racine du projet
 docker-compose build
 docker-compose up

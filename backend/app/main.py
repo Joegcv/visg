@@ -7,7 +7,8 @@ import os
 app = FastAPI()
 
 # Chemin absolu vers le répertoire frontend
-frontend_directory = os.path.join(os.path.dirname(__file__), '../../frontend')
+#frontend_directory = os.path.join(os.path.dirname(__file__), '../../frontend')
+frontend_directory = os.path.join(os.path.dirname(__file__), '/app/frontend')
 
 # Servir les fichiers statiques du frontend
 #app.mount("/", StaticFiles(directory=frontend_directory, html=True), name="static")
@@ -44,4 +45,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="localhost", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
